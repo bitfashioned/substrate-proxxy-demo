@@ -1,12 +1,12 @@
-import Api from './components/Api';
+import ApiProvider from './substrate/components/ApiProvider';
 import Proxxy from './pages/Proxxy';
 import './App.css'
 
 function App() {
   return (
-    <Api>
+    <ApiProvider>
       <Proxxy/>
-    </Api>
+    </ApiProvider>
   );
 }
 

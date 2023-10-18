@@ -1,4 +1,4 @@
-import type { WithChildren } from '../types';
+import type { WithChildren } from '../../types';
 
 import { FC } from 'react';
 import { Box, BoxProps, styled, keyframes } from '@mui/material';

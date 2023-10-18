@@ -1,4 +1,4 @@
-import type { WithChildren } from '../types';
+import type { WithChildren } from '../../types';
 import { FC, useEffect, useCallback, useMemo, useState } from 'react';
 import "@polkadot/api-augment"
 import { ApiPromise, HttpProvider } from '@polkadot/api';
@@ -12,6 +12,7 @@ import { Box, Typography } from '@mui/material';
 import ApiContext, { ApiContextType } from './ApiContext';
 import Error from './Error';
 import Loading from './Loading';
+import { ProxxyProvider } from '../../cmix/contexts/proxxy-context';
 
 interface InjectedAccountExt {
   address: string;
@@ -62,7 +63,7 @@ async function load(api: ApiPromise, injectedPromise: Promise<InjectedExtension[
 
 const registry = new TypeRegistry();
 
-const Api: FC<WithChildren> = ({ children }) => {
+const ApiProvider: FC<WithChildren> = ({ children }) => {
   const [error, setApiError] = useState<null | string>(null);
   const [api, setApi] = useState<ApiPromise>();
   const [connected, setConnected] = useState(false);
@@ -144,4 +145,4 @@ const Api: FC<WithChildren> = ({ children }) => {
   return <ApiContext.Provider value={context}>{children}</ApiContext.Provider>;
 };
 
-export default Api;
+export default ApiProvider;
