@@ -6,6 +6,47 @@ export type WithChildren = {
 
 type HealthCallback = { Callback: (healthy: boolean) => void };
 
+export type XXDKUtils = {
+  NewCmix: (
+    ndf: string,
+    storageDir: string,
+    password: Uint8Array,
+    registrationCode: string
+  ) => Promise<void>;
+  LoadCmix: (
+    storageDirectory: string,
+    password: Uint8Array,
+    cmixParams: Uint8Array
+  ) => Promise<CMix>;
+  Login: (
+    cmixId: number,
+    callbacks: any,
+    identity: Uint8Array,
+    e2eparams: Uint8Array
+  ) => E2E;
+  StoreReceptionIdentity: (
+    key: string,
+    identity: Uint8Array,
+    cmixId: number
+  ) => void;
+  LoadReceptionIdentity: (key: string, cmixId: number) => Uint8Array;
+  RequestRestLike: (
+    e2eId: number,
+    recipient: Uint8Array,
+    message: Uint8Array,
+    params: Uint8Array
+  ) => Promise<Uint8Array>;
+  GetDefaultCMixParams: () => Uint8Array;
+  GetDefaultE2EParams: () => Uint8Array;
+  GetDefaultSingleUseParams: () => Uint8Array;
+  Uint8ArrayToBase64: (bytes: Uint8Array) => string;
+  Base64ToUint8Array: (base64: string) => Uint8Array;
+  GetVersion: () => string;
+  GetClientVersion: () => string;
+  GetOrInitPassword: (password: string) => Promise<Uint8Array>;
+  GetWasmSemanticVersion: () => Uint8Array;
+};
+
 export type CMix = {
   AddHealthCallback: (callback: HealthCallback) => number;
   GetID: () => number;

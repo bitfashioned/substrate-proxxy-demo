@@ -1,7 +1,7 @@
 import type { WithChildren } from '../../types';
-import { FC, useEffect, useCallback, useMemo, useState } from 'react';
+import { FC, useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import "@polkadot/api-augment"
-import { ApiPromise, HttpProvider } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { keyring } from '@polkadot/ui-keyring';
 import type { InjectedExtension } from '@polkadot/extension-inject/types';
 import { web3Accounts, web3Enable } from '@polkadot/extension-dapp';
@@ -12,7 +12,9 @@ import { Box, Typography } from '@mui/material';
 import ApiContext, { ApiContextType } from './ApiContext';
 import Error from './Error';
 import Loading from './Loading';
-import { ProxxyProvider } from '../../cmix/contexts/proxxy-context';
+import { ProxxyProvider } from '../../proxxy/provider';
+import { initCmix } from '../../cmix';
+import { encoder } from '../../cmix/utils';
 
 interface InjectedAccountExt {
   address: string;
@@ -61,9 +63,12 @@ async function load(api: ApiPromise, injectedPromise: Promise<InjectedExtension[
   }
 }
 
+const pw = encoder.encode('12345678901234567890');
 const registry = new TypeRegistry();
 
 const ApiProvider: FC<WithChildren> = ({ children }) => {
+  const calledInit = useRef(false);
+  const [e2eId, setE2eId] = useState<null | number>(null);
   const [error, setApiError] = useState<null | string>(null);
   const [api, setApi] = useState<ApiPromise>();
   const [connected, setConnected] = useState(false);
@@ -79,16 +84,37 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
   );
 
   useEffect(() => {
-    if (!api) {
-      const provider = new HttpProvider('https://xxnetwork-rpc.dwellir.com');
-      setApi(
-        new ApiPromise({
-          provider,
-          registry
-        })
-      );
+    async function initOnce() {
+        calledInit.current = true;
+        // Init proxxy
+        console.log("Proxxy: Initializing CMIX...");
+        const id = await initCmix(pw);
+        setE2eId(id);
+        console.log("Proxxy: CMIX Initialized!");
     }
-  }, [api]);
+    if (!calledInit.current) {
+      initOnce();
+    }
+}, [setE2eId]);
+
+  useEffect(() => {
+    if (!api && e2eId) {
+      console.log("Proxxy: Creating Provider");
+      const provider = new ProxxyProvider(e2eId, '/xx/mainnet');
+      // Connect to the provider
+      console.log("Proxxy: Connecting to Relay...");
+      provider.connect().then(() => {
+        // Create the API
+        console.log("Proxxy: Creating API!");
+        setApi(
+          new ApiPromise({
+            provider,
+            registry
+          })
+        );
+      })
+    }
+  }, [api, e2eId]);
 
   useEffect(() => {
     if (api) {
@@ -96,7 +122,7 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
       api.on('connected', () => setConnected(true));
       api.on('error', onError);
       api.on('ready', () => {
-        const injectedPromise = web3Enable('xx network Simple Staking');
+        const injectedPromise = web3Enable('substrate proxxy demo');
 
         injectedPromise
           .catch(console.error);
