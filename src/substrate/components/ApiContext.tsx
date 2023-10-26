@@ -1,12 +1,14 @@
 import type { ApiPromise } from '@polkadot/api';
 
 import React from 'react';
+import { ProxxyClient } from '../../proxxy/client';
 
 export type ApiContextType = {
   api: ApiPromise | undefined;
   connected: boolean;
   ready: boolean;
   error: string | null;
+  proxxy: ProxxyClient | undefined;
 };
 
 const ApiContext: React.Context<ApiContextType> = React.createContext(

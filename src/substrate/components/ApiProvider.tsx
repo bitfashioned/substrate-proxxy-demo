@@ -15,6 +15,7 @@ import Loading from './Loading';
 import { ProxxyProvider } from '../../proxxy/provider';
 import { initCmix } from '../../cmix';
 import { encoder } from '../../cmix/utils';
+import { ProxxyClient } from '../../proxxy/client';
 
 interface InjectedAccountExt {
   address: string;
@@ -55,11 +56,24 @@ async function getInjectedAccounts (injectedPromise: Promise<InjectedExtension[]
 
 async function load(api: ApiPromise, injectedPromise: Promise<InjectedExtension[]>): Promise<void> {
   const injectedAccounts = await getInjectedAccounts(injectedPromise);
+  console.log(`Proxxy: got accounts: ${injectedAccounts.map(({ address }) => address).join(', ')}`);
+  const accounts = injectedAccounts.map(({ address, meta }) => {
+    return {
+      address,
+      meta: {
+        genesisHash: api.genesisHash.toHex(),
+        name: meta.name,
+        source: meta.source,
+        whenCreated: meta.whenCreated,
+      }
+    }
+  });
   if (!isKeyringLoaded()) {
+    console.log(`Proxxy: loading keyring`);
     keyring.loadAll({
       genesisHash: api.genesisHash,
       ss58Format: 55
-    }, injectedAccounts);
+    }, accounts);
   }
 }
 
@@ -73,6 +87,7 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
   const [api, setApi] = useState<ApiPromise>();
   const [connected, setConnected] = useState(false);
   const [ready, setIsReady] = useState(false);
+  const [proxxy, setProxxy] = useState<ProxxyClient>();
 
   const onError = useCallback(
     (err: unknown): void => {
@@ -95,17 +110,17 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
     if (!calledInit.current) {
       initOnce();
     }
-}, [setE2eId]);
+  }, [setE2eId]);
 
   useEffect(() => {
-    if (!api && e2eId) {
+    if (!api && e2eId !== null) {
       console.log("Proxxy: Creating Provider");
       const provider = new ProxxyProvider(e2eId, '/xx/mainnet');
       // Connect to the provider
-      console.log("Proxxy: Connecting to Relay...");
       provider.connect().then(() => {
         // Create the API
-        console.log("Proxxy: Creating API!");
+        setProxxy(provider.proxxy);
+        console.log("Proxxy: Creating API");
         setApi(
           new ApiPromise({
             provider,
@@ -122,6 +137,7 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
       api.on('connected', () => setConnected(true));
       api.on('error', onError);
       api.on('ready', () => {
+        console.log("Proxxy: API ready, enabling web3");
         const injectedPromise = web3Enable('substrate proxxy demo');
 
         injectedPromise
@@ -141,8 +157,9 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
       connected,
       ready,
       error,
+      proxxy,
     }),
-    [api, connected, error, ready]
+    [api, connected, error, ready, proxxy]
   );
 
   if (error) {
@@ -162,7 +179,7 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
       <Box sx={{ p: 5, py: 20 }}>
         <Loading size='md' />
         <Typography variant='body1' sx={{ textAlign: 'center', marginTop: '1em' }}>
-          Connecting to the API, please wait.
+          Connecting to xx network, please wait...
         </Typography>
       </Box>
     );

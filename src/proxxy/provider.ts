@@ -12,7 +12,7 @@ import { logger, noop } from "@polkadot/util";
 import { RpcCoder } from "./coder/index.js";
 import { LRUCache } from "./lru/index.js";
 import { relayContact } from "../assets/relay.js";
-import { xxmetadata } from "../assets/metadata.js";
+import { xxnetwork } from "./defaults/index.js";
 import { ProxxyClient, ProxxyClass } from "./client.js";
 
 const ERROR_SUBSCRIBE =
@@ -23,6 +23,28 @@ const l = logger("api-proxxy-http");
 
 const encoder = new TextEncoder();
 const defaultRelay = encoder.encode(relayContact);
+
+// Define well know methods
+const wellKnownMethods: string[] = [
+  "system_chain",
+  "state_getMetadata",
+  "chain_getBlockHash", // only if params has block #0
+  "rpc_methods",
+  "system_properties",
+  "state_getRuntimeVersion",
+];
+
+// Well known responses per supported network
+const wellKnownResponses: Record<string, Record<string, string>> = {
+  "/xx/mainnet": {
+    system_chain: xxnetwork.name,
+    state_getMetadata: xxnetwork.metadata,
+    chain_getBlockHash: xxnetwork.genesisHash,
+    rpc_methods: xxnetwork.methods,
+    system_properties: xxnetwork.properties,
+    state_getRuntimeVersion: xxnetwork.runtimeVersion,
+  },
+};
 
 /**
  *
@@ -36,7 +58,6 @@ export class ProxxyProvider implements ProviderInterface {
   readonly #stats: ProviderStats;
   readonly #proxxy: ProxxyClient;
   readonly #network: string;
-  readonly #relay: Uint8Array;
   #connected: boolean = false;
 
   /**
@@ -62,9 +83,8 @@ export class ProxxyProvider implements ProviderInterface {
       },
     };
     this.#network = network;
-    this.#relay = relay;
     // Create proxxy client
-    this.#proxxy = new ProxxyClass(e2eId);
+    this.#proxxy = new ProxxyClass(relay, e2eId);
   }
 
   /**
@@ -87,19 +107,8 @@ export class ProxxyProvider implements ProviderInterface {
    * @description Manually connect from the connection
    */
   public async connect(): Promise<void> {
-    // Connect proxxy client to the given relay
-    const networks = await this.#proxxy.connect(this.#relay);
-    // Check network is supported
-    let supported = false;
-    networks.forEach((network) => {
-      console.log(`Proxxy: Network - ${network}`);
-      if (network === this.#network) {
-        supported = true;
-      }
-    });
-    if (!supported) {
-      throw new Error(`Network ${this.#network} not supported by relay`);
-    }
+    // TODO: contact relay to find supported networks?
+    // This should be done before instantiating the provider anyways
     this.#connected = true;
   }
 
@@ -157,9 +166,19 @@ export class ProxxyProvider implements ProviderInterface {
   ): Promise<T> {
     this.#stats.total.requests++;
 
-    // Handle metadata locally
-    if (method === "state_getMetadata") {
-      return xxmetadata as T;
+    // Handle some well-known calls locally
+    if (
+      wellKnownMethods.includes(method) &&
+      this.#network in wellKnownResponses &&
+      (method !== "chain_getBlockHash" ||
+        (params.length == 1 && (params[0] as number) === 0))
+    ) {
+      if (method === "state_getMetadata") {
+        // TODO: remove this hack, for some reason polkadot-js api doesn't
+        // trigger the ready event if all initial calls return cached results
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return wellKnownResponses[this.#network][method] as T;
     }
 
     const [, body] = this.#coder.encodeJson(method, params);
@@ -233,5 +252,10 @@ export class ProxxyProvider implements ProviderInterface {
     l.error(ERROR_SUBSCRIBE);
 
     throw new Error(ERROR_SUBSCRIBE);
+  }
+
+  // Get proxxy client
+  public get proxxy(): ProxxyClient {
+    return this.#proxxy;
   }
 }

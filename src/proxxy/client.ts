@@ -12,7 +12,8 @@ export class ProxxyClass implements ProxxyClient {
   #networks: string[] = [];
   #recipient: Uint8Array = new Uint8Array();
 
-  constructor(e2eId: number) {
+  constructor(relay: Uint8Array, e2eId: number) {
+    this.#recipient = relay;
     this.#e2eId = e2eId;
     if (window.utils) {
       this.#params = window.utils.GetDefaultSingleUseParams();
