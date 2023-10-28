@@ -129,7 +129,7 @@ function FormatBalance({
   );
 
   return withTooltip
-    ? <CustomTooltip title={formatBalance(value, { withSi: false, precision: 9, decimals: 9, forceUnit: '-' })}>{formattedBalance}</CustomTooltip>
+    ? <CustomTooltip title={formatBalance(value, { withSi: false, precision: denomination, decimals: denomination, forceUnit: '-' })}>{formattedBalance}</CustomTooltip>
     : formattedBalance;
 }
 

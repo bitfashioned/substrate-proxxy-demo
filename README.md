@@ -7,7 +7,9 @@ The xx network provides a library called xxDK to interact with the cMix mixnet. 
 Data sent over cMix is stored in gateways, and xxDK handles automatically picking up data from gateways. This is useful for a client-side only app, for example a messaging app, where both ends of the communication are users. In the case of interacting with a blockchain, the receiver is a JSON-RPC HTTP server. This way, in order to support blockchain interactions, xx network's team built a service called [Proxxy](https://xxnetwork.wiki/Proxxy). This service is a simple API for sending requests to supported blockchain networks over cMix to a relay server, which then submits the request to the desired blockchain.
 
 This demo includes a Proxxy client that uses the xxDK WASM in order to communicate with the relay server, directly from the webapp.
-This is the first instance of using Proxxy this way, since previously it was necessary to have this client embedded into a desktop app.
+
+A new feature in this demo is the addition of graphQL indexer endpoints to the Proxxy relay server.
+This is used after the transaction is sent in order to query the block it get's included on, to provide that information to the user.
 
 ## Running the demo
 

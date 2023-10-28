@@ -8,6 +8,7 @@ export type ApiContextType = {
   connected: boolean;
   ready: boolean;
   error: string | null;
+  network: string | null;
   proxxy: ProxxyClient | undefined;
 };
 

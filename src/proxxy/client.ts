@@ -6,6 +6,8 @@ export interface ProxxyClient {
   request<T = any>(network: string, data: Uint8Array): Promise<[T, number]>;
 }
 
+const MAX_RETRIES = 3;
+
 export class ProxxyClass implements ProxxyClient {
   readonly #e2eId: number;
   readonly #params: Uint8Array;
@@ -51,7 +53,22 @@ export class ProxxyClass implements ProxxyClient {
       method: 2, // POST
       data: data,
     };
-    return this.#request(req);
+    let tries = 1;
+    while (true) {
+      try {
+        const resp = await this.#request(req);
+        return resp;
+      } catch (e) {
+        console.log(`Proxxy: Request failed with error: ${e}`);
+        if (tries < MAX_RETRIES) {
+          tries++;
+          console.log("Proxxy: Retrying");
+          continue;
+        }
+        console.log("Proxxy: Max retries reached");
+        throw new Error("Proxxy: Max retries reached");
+      }
+    }
   }
 
   async #request<T = any>(req: ProxxyRequest): Promise<[T, number]> {
@@ -83,7 +100,11 @@ export class ProxxyClass implements ProxxyClient {
     // Parse response
     console.log("Proxxy: Parsing response");
     const respStr = decoder.decode(response);
+    console.log(`Proxxy: ${respStr}`);
     const resp = JSON.parse(respStr);
+    if ("error" in resp) {
+      throw new Error(resp.error);
+    }
     const contentBytes = window.utils?.Base64ToUint8Array(resp.content);
     const contentStr = decoder.decode(contentBytes);
     const content = JSON.parse(contentStr);

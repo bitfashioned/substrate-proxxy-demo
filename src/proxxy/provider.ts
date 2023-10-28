@@ -12,7 +12,7 @@ import { logger, noop } from "@polkadot/util";
 import { RpcCoder } from "./coder/index.js";
 import { LRUCache } from "./lru/index.js";
 import { relayContact } from "../assets/relay.js";
-import { xxnetwork } from "./defaults/index.js";
+import { xxnetwork, polkadot } from "./defaults/index.js";
 import { ProxxyClient, ProxxyClass } from "./client.js";
 
 const ERROR_SUBSCRIBE =
@@ -43,6 +43,14 @@ const wellKnownResponses: Record<string, Record<string, string>> = {
     rpc_methods: xxnetwork.methods,
     system_properties: xxnetwork.properties,
     state_getRuntimeVersion: xxnetwork.runtimeVersion,
+  },
+  "/polkadot/mainnet": {
+    system_chain: polkadot.name,
+    state_getMetadata: polkadot.metadata,
+    chain_getBlockHash: polkadot.genesisHash,
+    rpc_methods: polkadot.methods,
+    system_properties: polkadot.properties,
+    state_getRuntimeVersion: polkadot.runtimeVersion,
   },
 };
 

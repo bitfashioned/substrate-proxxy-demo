@@ -1,5 +1,5 @@
 import type { WithChildren } from '../../types';
-import { FC, useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { FC, useEffect, useCallback, useMemo, useRef, useState, ReactNode } from 'react';
 import "@polkadot/api-augment"
 import { ApiPromise } from '@polkadot/api';
 import { keyring } from '@polkadot/ui-keyring';
@@ -13,8 +13,6 @@ import ApiContext, { ApiContextType } from './ApiContext';
 import Error from './Error';
 import Loading from './Loading';
 import { ProxxyProvider } from '../../proxxy/provider';
-import { initCmix } from '../../cmix';
-import { encoder } from '../../cmix/utils';
 import { ProxxyClient } from '../../proxxy/client';
 
 interface InjectedAccountExt {
@@ -72,17 +70,20 @@ async function load(api: ApiPromise, injectedPromise: Promise<InjectedExtension[
     console.log(`Proxxy: loading keyring`);
     keyring.loadAll({
       genesisHash: api.genesisHash,
-      ss58Format: 55
+      ss58Format: api.registry.chainSS58
     }, accounts);
   }
 }
 
-const pw = encoder.encode('12345678901234567890');
 const registry = new TypeRegistry();
 
-const ApiProvider: FC<WithChildren> = ({ children }) => {
-  const calledInit = useRef(false);
-  const [e2eId, setE2eId] = useState<null | number>(null);
+type Props = {
+  children?: ReactNode;
+  network?: string;
+  e2eId?: number;
+};
+
+const ApiProvider: FC<Props> = ({ children, e2eId, network }) => {
   const [error, setApiError] = useState<null | string>(null);
   const [api, setApi] = useState<ApiPromise>();
   const [connected, setConnected] = useState(false);
@@ -99,23 +100,9 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
   );
 
   useEffect(() => {
-    async function initOnce() {
-        calledInit.current = true;
-        // Init proxxy
-        console.log("Proxxy: Initializing CMIX...");
-        const id = await initCmix(pw);
-        setE2eId(id);
-        console.log("Proxxy: CMIX Initialized!");
-    }
-    if (!calledInit.current) {
-      initOnce();
-    }
-  }, [setE2eId]);
-
-  useEffect(() => {
-    if (!api && e2eId !== null) {
+    if (!api && e2eId !== undefined && network) {
       console.log("Proxxy: Creating Provider");
-      const provider = new ProxxyProvider(e2eId, '/xx/mainnet');
+      const provider = new ProxxyProvider(e2eId, network);
       // Connect to the provider
       provider.connect().then(() => {
         // Create the API
@@ -157,6 +144,7 @@ const ApiProvider: FC<WithChildren> = ({ children }) => {
       connected,
       ready,
       error,
+      network: network || "/xx/mainnet",
       proxxy,
     }),
     [api, connected, error, ready, proxxy]
